@@ -1,0 +1,581 @@
+{
+  "info": {
+    "_postman_id": "c4e8a1b2-3d5f-4a6e-8b90-1f2e3d4c5b6a",
+    "name": "TPI Medical appointments",
+    "description": "TPI medical appointments API. Start it with npm start first. Each route appears once. Create patient and create doctor save the id; create appointment uses them. DELETE sets active to false and fills deletedAt. To see the soft delete, send the same GET again: it returns 404, and the list hides that document.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "patientId",
+      "value": ""
+    },
+    {
+      "key": "doctorId",
+      "value": ""
+    },
+    {
+      "key": "appointmentId",
+      "value": ""
+    },
+    {
+      "key": "nationalId",
+      "value": ""
+    },
+    {
+      "key": "licenseNumber",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Home",
+      "item": [
+        {
+          "name": "API status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/",
+            "description": "Checks that the API is running and shows the routes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "description": "patients collection. healthInsurance and address are embedded.",
+      "item": [
+        {
+          "name": "Create patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nationalId\": \"{{nationalId}}\",\n  \"firstName\": \"Lucia\",\n  \"lastName\": \"Fernandez\",\n  \"email\": \"lucia.fernandez@example.com\",\n  \"phone\": \"388-4000001\",\n  \"healthInsurance\": {\n    \"name\": \"OSDE\",\n    \"memberNumber\": \"A-1001\"\n  },\n  \"address\": {\n    \"street\": \"Belgrano 123\",\n    \"city\": \"San Salvador de Jujuy\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/patients",
+            "description": "Creates a patient. nationalId is generated on each send so it does not hit the unique index. Saves patientId."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const suffix = Date.now().toString().slice(-8);",
+                  "pm.collectionVariables.set('nationalId', '4' + suffix);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('patientId', body._id);",
+                  "    pm.test('Stays active', function () {",
+                  "        pm.expect(body.active).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List patients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/patients",
+            "description": "Returns only patients with active set to true. Send this same request again after Soft delete patient; that patient no longer appears."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get patient",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/patients/{{patientId}}",
+            "description": "Reads one active patient by id. Send this same request again after Soft delete patient; it returns 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update patient",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"388-4999999\",\n  \"active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/patients/{{patientId}}",
+            "description": "Updates phone. active is sent on purpose: the API ignores it, because soft delete only happens on DELETE."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Phone changed and stayed active', function () {",
+                  "        pm.expect(body.phone).to.eql('388-4999999');",
+                  "        pm.expect(body.active).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Soft delete patient",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/patients/{{patientId}}",
+            "description": "Soft delete of the patient. The document stays in the collection, with active set to false and deletedAt filled. Send it after Create appointment if you still need this patient for that request. Then send Get patient again."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Marked inactive', function () {",
+                  "        const body = pm.response.json();",
+                  "        pm.expect(body.active).to.eql(false);",
+                  "        pm.expect(body.deletedAt).to.be.ok;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "description": "doctors collection. schedules is embedded.",
+      "item": [
+        {
+          "name": "Create doctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"licenseNumber\": \"{{licenseNumber}}\",\n  \"firstName\": \"Martin\",\n  \"lastName\": \"Quiroga\",\n  \"specialty\": \"General medicine\",\n  \"office\": \"Office 3\",\n  \"schedules\": [\n    { \"day\": \"monday\", \"from\": \"08:00\", \"to\": \"12:00\" },\n    { \"day\": \"wednesday\", \"from\": \"14:00\", \"to\": \"18:00\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/doctors",
+            "description": "Creates a doctor. licenseNumber is generated on each send. Saves doctorId. day accepts: monday, tuesday, wednesday, thursday, friday, saturday."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const suffix = Date.now().toString().slice(-8);",
+                  "pm.collectionVariables.set('licenseNumber', 'MP-' + suffix);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('doctorId', pm.response.json()._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List doctors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/doctors",
+            "description": "Returns only doctors with active set to true. Send this same request again after Soft delete doctor; that doctor no longer appears."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get doctor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/doctors/{{doctorId}}",
+            "description": "Reads one active doctor by id. Send this same request again after Soft delete doctor; it returns 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update doctor",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"office\": \"Office 5\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/doctors/{{doctorId}}",
+            "description": "Updates office only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Office changed', function () {",
+                  "        pm.expect(pm.response.json().office).to.eql('Office 5');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Soft delete doctor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/doctors/{{doctorId}}",
+            "description": "Soft delete of the doctor. The document stays in the collection, with active set to false and deletedAt filled. Send it after Create appointment if you still need this doctor for that request. Then send Get doctor again."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Marked inactive', function () {",
+                  "        const body = pm.response.json();",
+                  "        pm.expect(body.active).to.eql(false);",
+                  "        pm.expect(body.deletedAt).to.be.ok;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "description": "appointments collection. patientId and doctorId are references; GET returns them populated.",
+      "item": [
+        {
+          "name": "Create appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"doctorId\": \"{{doctorId}}\",\n  \"date\": \"2026-11-09T09:00:00.000-03:00\",\n  \"reason\": \"General checkup\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/appointments",
+            "description": "Creates an appointment. The patient and the doctor must exist and be active. Saves appointmentId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('appointmentId', body._id);",
+                  "    pm.test('Status is scheduled', function () {",
+                  "        pm.expect(body.status).to.eql('scheduled');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List appointments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/appointments",
+            "description": "Lists active appointments, with patient and doctor data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get appointment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/appointments/{{appointmentId}}",
+            "description": "Reads one active appointment by id, with references populated. Send this same request again after Soft delete appointment; it returns 404."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update appointment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"attended\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/appointments/{{appointmentId}}",
+            "description": "Changes status. Values are scheduled, attended, or cancelled. That is not the soft delete."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Marked attended and stays active', function () {",
+                  "        const body = pm.response.json();",
+                  "        pm.expect(body.status).to.eql('attended');",
+                  "        pm.expect(body.active).to.eql(true);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Soft delete appointment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/appointments/{{appointmentId}}",
+            "description": "Soft delete of the appointment. The document stays in the collection, with active set to false and deletedAt filled."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test('Marked inactive', function () {",
+                  "        const body = pm.response.json();",
+                  "        pm.expect(body.active).to.eql(false);",
+                  "        pm.expect(body.deletedAt).to.be.ok;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
